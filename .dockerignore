@@ -1,0 +1,16 @@
+.git
+.vscode
+.pytest_cache
+htmlcov
+.coverage
+tests
+
+Dockerfile
+.DS_Store
+.gitignore
+.dockerignore
+README.md
+
+
+Makefile
+Makefile.docker

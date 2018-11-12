@@ -1,0 +1,34 @@
+{
+    "gf_kitchen_workplace": {
+        "device_code": "A",
+        "system_code": "11000"
+    },
+    "gf_kitchen_window": {
+        "device_code": "B",
+        "system_code": "10000"
+    },
+    "ff_floor_tree": {
+        "device_code": "E",
+        "system_code": "01000"
+    },
+    "ff_mika_bed": {
+        "device_code": "A",
+        "system_code": "01000"
+    },
+    "ff_jona_bed": {
+        "device_code": "A",
+        "system_code": "10000"
+    },
+    "sf_floor_work_outlet": {
+        "device_code": "C",
+        "system_code": "10000"
+    },
+    "sf_bedroom_outlet": {
+        "device_code": "A",
+        "system_code": "10101"
+    },
+    "sf_bedroom_bed": {
+        "device_code": "A",
+        "system_code": "10100"
+    }
+}

@@ -1,0 +1,12 @@
+{
+    "host": "localhost",
+    "port": 1883,
+    "username": "admin",
+    "password": "admin",
+    "topics": {
+        "rc433/device1": 0,
+        "rc433/device2": 0,
+        "rc433/device3": 0,
+        "rc433/device4": 0
+    }
+}
