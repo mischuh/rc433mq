@@ -37,6 +37,10 @@ if __name__ == '__main__':
     )
 
     client = mqtt.Client()
+    client.username_pw_set(
+        username="admin",
+        password="admin"
+    )
     client.connect("localhost", 1883, 60)
     client.loop_start()
 

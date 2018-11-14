@@ -66,12 +66,6 @@ class RC433Switch(RC433Service):
         return isinstance(device, SystemDevice)
 
     def _switch(self, device, state):
-        if state.lower() == 'on':
-            return self._toggle(device, GPIO.HIGH)
-        else:
-            return self._toggle(device, GPIO.LOW)
-
-    def _toggle(self, device, mode):
         key = [
             int(device.system_code[0]),
             int(device.system_code[1]),
@@ -79,14 +73,22 @@ class RC433Switch(RC433Service):
             int(device.system_code[3]),
             int(device.system_code[4])
         ]
-        device = RC433Switch.DEVICE_LETTER[device.device_code]
+        device_letter = RC433Switch.DEVICE_LETTER[device.device_code]
         self._initialize()
-        return self._switcher(mode, key, device)
+        self.logger.debug(
+            "Toggle device (bit:{}, name:{}, state: {})"
+            .format(device_letter, device.device_name, state)
+        )
+        return self._toggle(
+            GPIO.HIGH if state.lower() == 'on' else GPIO.LOW,
+            key,
+            device_letter
+        )
 
-    def _switcher(self, switch, key, device):
+    def _toggle(self, switch, key, device_letter):
         bit = [
-            142, 142, 142, 142, 142, 142, 142, 142, 142, 142, 142, 136, 128, 0,
-            0, 0
+            142, 142, 142, 142, 142, 142, 142, 142,
+            142, 142, 142, 136, 128, 0, 0, 0
         ]
 
         for t in range(5):
@@ -94,7 +96,7 @@ class RC433Switch(RC433Service):
                 bit[t] = 136
         x = 1
         for i in range(1, 6):
-            if device & x > 0:
+            if device_letter & x > 0:
                 bit[4 + i] = 136
             x = x << 1
 

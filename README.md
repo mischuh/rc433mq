@@ -1,4 +1,4 @@
-# RC433MQ: Switch state of 433Mhz devices via messages
+# RC433MQ: Switch states of 433Mhz devices via messages
 
 Paste some intelligent text...
 
