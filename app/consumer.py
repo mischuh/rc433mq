@@ -4,6 +4,7 @@ from abc import abstractmethod
 from typing import Callable
 
 import attr
+
 import paho.mqtt.client as mqtt
 from schema import And, Optional, Schema, SchemaMissingKeyError, Use
 
@@ -217,5 +218,5 @@ class MQTTConsumer(GenericConsumer):
             )
 
     def cleanup(self) -> None:
-        self.logger.debug("Disconnecting...")
+        self.logger.info("Disconnecting...")
         self.client.disconnect()

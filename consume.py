@@ -1,13 +1,12 @@
 import logging
 import os
 
-from schema import And, Optional, Schema, Use
-
 from app.consumer import MQTTConsumer
 from app.device import DeviceDict, DeviceRegistry, MemoryState
 from app.rc433 import RC433Factory
+from schema import And, Optional, Schema, Use
 
-level = logging.DEBUG
+level = logging.INFO
 logging.basicConfig(
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
     level=level
@@ -50,14 +49,14 @@ if __name__ == '__main__':
             state = message.payload.decode("utf-8")
             STATE_SCHEMA.validate(state)
 
-            logger.debug(
+            logger.info(
                 "Topic {topic_dict} received state {state}".format(**locals())
             )
             device = device_db.lookup(topic_dict['device'])
             svc = RC433Factory.service(device)()
             success = svc.switch(device=device, state=state)
             # TODO: publish success code to loopback topic
-            logger.info("Succes: {success}".format(**locals()))
+            # logger.info("Succes: {success}".format(**locals()))
         except Exception:
             import traceback
             logger.error(traceback.print_exc())

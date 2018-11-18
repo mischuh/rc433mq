@@ -36,7 +36,7 @@ class RC433Service(LogMixin):
         if isinstance(device, StatefulDevice):
             # Unpack the actual device from the Stateful device wrapper
             device = device.device
-        self.logger.info(
+        self.logger.debug(
             "Device switch for '{device}' to '{state}' requested".format(
                 **locals()
             )
