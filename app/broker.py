@@ -1,17 +1,16 @@
 import json
 import os
 from abc import abstractmethod
-from typing import Callable
+from typing import Any, Callable
 
 import attr
-
 import paho.mqtt.client as mqtt
 from schema import And, Optional, Schema, SchemaMissingKeyError, Use
 
 from .util import LogMixin
 
 
-class InvalidConsumerConfigException(Exception):
+class InvalidClientConfigException(Exception):
     pass
 
 
@@ -20,13 +19,13 @@ class SubscriptionException(Exception):
 
 
 @attr.s
-class GenericConsumer(LogMixin):
+class GenericClient(LogMixin):
 
-    consumer_conf = attr.ib(validator=attr.validators.instance_of(dict))
+    client_conf = attr.ib(validator=attr.validators.instance_of(dict))
     client = attr.ib(default=None, init=False)
 
     @classmethod
-    def from_config(cls, file_name: str) -> 'GenericConsumer':
+    def from_config(cls, file_name: str) -> 'GenericClient':
         """
         Instead from dictionary loads the devices from a config json file.
         Args:
@@ -40,7 +39,7 @@ class GenericConsumer(LogMixin):
         return cls.from_json(jsonf)
 
     @classmethod
-    def from_json(cls, config: dict) -> 'GenericConsumer':
+    def from_json(cls, config: dict) -> 'GenericClient':
         """
         Instead from dictionary loads the devices from a config
         Args:
@@ -49,22 +48,14 @@ class GenericConsumer(LogMixin):
             Returns a `Conusmer` that is initialized from the given json.
         """
         try:
-            clz = cls(consumer_conf=config)
+            clz = cls(client_conf=config)
             clz.validate_config()
             return clz
         except (SchemaMissingKeyError, ValueError):
-            raise InvalidConsumerConfigException(
+            raise InvalidClientConfigException(
                 "Given consumer config is not valid: {config}".
                 format(**locals())
             )
-
-    @abstractmethod
-    def consume(self, *args) -> None:
-        """
-        Consume on a topic on a Message Broker
-        Concrete class must implement details
-        """
-        pass
 
     @abstractmethod
     def cleanup(self) -> None:
@@ -82,24 +73,12 @@ class GenericConsumer(LogMixin):
         """
         pass
 
-
-@attr.s
-class EchoConsumer(GenericConsumer):
-
-    def consume(self, *args) -> None:
-        self.logger.info(
-            "Consuming within {}".format(self.__class__.__name__)
-        )
-
-    def validate_config(self) -> bool:
-        return True
-
-    def cleanup(self) -> None:
+    @abstractmethod
+    def connect(self, func: Callable = None, *args) -> Any:
         pass
 
 
-@attr.s
-class MQTTConsumer(GenericConsumer):
+class MQTTClient(GenericClient):
 
     SCHEMA = Schema({
             Optional('host'): str,
@@ -109,52 +88,11 @@ class MQTTConsumer(GenericConsumer):
             'topics': dict
         })
 
-    def consume(self, func: Callable = None, *args) -> None:
-        """
-        Connects to a MQTT host on a specific topic and loops forever.
-        `func` callback function handles incoming messages
-        Args:
-            func (Callable): callback function to do something
-                            with incoming messages
-        """
-        try:
-            self.client = mqtt.Client()
-            self.client.on_connect = self._on_connect
-            self.client.on_message = func or self._on_message
-            username = os.environ.get(
-                'MQTT_USERNAME',
-                self.consumer_conf.get('username', None)
-            )
-            if username:
-                self.client.username_pw_set(
-                    username=username,
-                    password=os.environ.get(
-                        'MQTT_PASSWORD',
-                        self.consumer_conf.get('password', None)
-                    )
-                )
-            self.client.connect(
-                host=os.environ.get(
-                    'MQTT_HOST',
-                    self.consumer_conf.get('host', None)
-                ),
-                port=self.consumer_conf['port'],
-                keepalive=60
-            )
-            self.client.loop_forever()
-        except KeyboardInterrupt:
-            self.cleanup()
-
     def validate_config(self) -> bool:
-        """
-        Validates MQTT Broker config.
-        `host` is optional and can be either set as env var
-        or within the config file.
-        """
-        success = MQTTConsumer.SCHEMA.validate(self.consumer_conf) \
+        success = MQTTClient.SCHEMA.validate(self.client_conf) \
             and os.environ.get(
                 'MQTT_HOST',
-                self.consumer_conf.get('host')
+                self.client_conf.get('host')
             )
         if not success:
             raise ValueError(
@@ -162,16 +100,23 @@ class MQTTConsumer(GenericConsumer):
                 "Something is wrong with it. "
                 "Hint: `host`: '{}".format(os.environ.get(
                         'MQTT_HOST',
-                        self.consumer_conf.get('host')
+                        self.client_conf.get('host')
                     )
                 )
             )
         return success
 
+    def _on_connect(self, client, userdata, flags, rc) -> None:
+        """
+        Fallback method in case no callback function is passed into
+        `MQTTConsumer.consume(on_connect)` function
+        """
+        pass
+
     def _on_message(self, client, userdata, message) -> None:
         """
         Fallback method in case no callback function is passed into
-        `MQTTConsumer.consume(func)` function
+        `MQTTConsumer.consume(on_message)` function
         """
         self.logger.info(
             "Default callback: Received message '{}' on topic '{}'".format(
@@ -179,6 +124,64 @@ class MQTTConsumer(GenericConsumer):
                 message.topic
             )
         )
+
+    def connect(self,
+                on_connect: Callable = None,
+                on_message: Callable = None,
+                *args) -> Any:
+        """
+        """
+        self.client = mqtt.Client()
+        self.client.on_connect = on_connect or self._on_connect
+        self.client.on_message = on_message or self._on_message
+        username = os.environ.get(
+            'MQTT_USERNAME',
+            self.client_conf.get('username', None)
+        )
+        if username:
+            self.client.username_pw_set(
+                username=username,
+                password=os.environ.get(
+                    'MQTT_PASSWORD',
+                    self.client_conf.get('password', None)
+                )
+            )
+        self.client.connect(
+            host=os.environ.get(
+                'MQTT_HOST',
+                self.client_conf.get('host', None)
+            ),
+            port=self.client_conf['port'],
+            keepalive=60
+        )
+
+    def cleanup(self) -> None:
+        self.logger.info("Disconnecting...")
+        self.client.disconnect()
+
+
+class GenericPublisher:
+
+    @abstractmethod
+    def publish(self, message):
+        pass
+
+
+class MQTTPublisher(MQTTClient, GenericPublisher):
+
+    def publish(self, topic, payload=None, qos=0, retain=False) -> None:
+        self.connect()
+        self.client.publish(topic, payload, qos, retain)
+
+
+class GenericSubscriber:
+
+    @abstractmethod
+    def consume(self, *args, **kwargs) -> None:
+        pass
+
+
+class MQTTSubscriber(MQTTClient, GenericSubscriber):
 
     def _on_connect(self, client, userdata, flags, rc) -> None:
         """
@@ -205,18 +208,21 @@ class MQTTConsumer(GenericConsumer):
         )
         # Subscribing in on_connect() means that if we lose the connection and
         # reconnect then subscriptions will be renewed.
-        res = self.client.subscribe(list(self.consumer_conf['topics'].items()))
+        res = self.client.subscribe(list(self.client_conf['topics'].items()))
         if res[0] == mqtt.MQTT_ERR_SUCCESS:
             self.logger.debug(
                 "Succesfully connected on topics: {}".
-                format(list(self.consumer_conf['topics'].items()))
+                format(list(self.client_conf['topics'].items()))
             )
         else:
             raise SubscriptionException(
                 "Could not connect on topics: {}".
-                format(list(self.consumer_conf['topics'].items()))
+                format(list(self.client_conf['topics'].items()))
             )
 
-    def cleanup(self) -> None:
-        self.logger.info("Disconnecting...")
-        self.client.disconnect()
+    def consume(self, on_message_call: Callable, **kwargs) -> None:
+        try:
+            self.connect(on_message=on_message_call)
+            self.client.loop_forever()
+        except KeyboardInterrupt:
+            self.cleanup()

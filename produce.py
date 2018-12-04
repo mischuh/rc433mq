@@ -1,10 +1,13 @@
+"""
+    Example Producer setup
+"""
+
 import logging
 import os
 import random
 import time
 
-import paho.mqtt.client as mqtt
-
+from app.broker import MQTTPublisher
 from app.device import DeviceDict, DeviceRegistry, MemoryState
 
 level = logging.DEBUG
@@ -13,6 +16,8 @@ logging.basicConfig(
     level=level
 )
 logger = logging.getLogger("RC433MQ")
+
+base_path = os.path.abspath(os.path.dirname(__file__))
 
 
 def get_devices():
@@ -36,13 +41,8 @@ if __name__ == '__main__':
         format(str(len(device_names)), device_names)
     )
 
-    client = mqtt.Client()
-    client.username_pw_set(
-        username="admin",
-        password="admin"
-    )
-    client.connect("localhost", 1883, 60)
-    client.loop_start()
+    config_file = os.path.join(base_path, 'conf/consumer.json')
+    client = MQTTPublisher.from_config(config_file)
 
     while True:
         time.sleep(2)

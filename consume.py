@@ -1,10 +1,11 @@
 import logging
 import os
 
-from app.consumer import MQTTConsumer
+from schema import And, Optional, Schema, Use
+
+from app.broker import MQTTPublisher, MQTTSubscriber
 from app.device import DeviceDict, DeviceRegistry, MemoryState
 from app.rc433 import RC433Factory
-from schema import And, Optional, Schema, Use
 
 level = logging.INFO
 logging.basicConfig(
@@ -55,8 +56,9 @@ if __name__ == '__main__':
             device = device_db.lookup(topic_dict['device'])
             svc = RC433Factory.service(device)()
             success = svc.switch(device=device, state=state)
-            # TODO: publish success code to loopback topic
-            # logger.info("Succes: {success}".format(**locals()))
+            # return result
+            topic = "{topic}/{floor}/{device}/state".format(**topic_dict)
+            mqp.publish(topic=topic, payload=state, retain=True)
         except Exception:
             import traceback
             logger.error(traceback.print_exc())
@@ -68,5 +70,6 @@ if __name__ == '__main__':
         format(str(len(device_names)), device_names)
     )
     config_file = os.path.join(base_path, 'conf/consumer.json')
-    mq = MQTTConsumer.from_config(config_file)
-    mq.consume(handle_state)
+    mqs = MQTTSubscriber.from_config(config_file)
+    mqp = MQTTPublisher.from_config(config_file)
+    mqs.consume(handle_state)
