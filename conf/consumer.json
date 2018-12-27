@@ -4,6 +4,13 @@
     "username": "admin",
     "password": "admin",
     "topics": {
-        "rc433": 0
+        "rc433/groundfloor/gf_kitchen_window/switch": 0,
+        "rc433/groundfloor/gf_kitchen_workplace/switch": 0,
+        "rc433/firstfloor/ff_floor_tree/switch": 0,
+        "rc433/firstfloor/ff_mika_bed/switch": 0,
+        "rc433/firstfloor/ff_jona_bed/switch": 0,
+        "rc433/secondfloor/sf_floor_work_outlet/switch": 0,
+        "rc433/secondfloor/sf_bedroom_outlet/switch": 0,
+        "rc433/secondfloor/sf_bedroom_bed/switch": 0
     }
 }

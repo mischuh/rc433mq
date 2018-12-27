@@ -1,4 +1,7 @@
-import json
+'''
+    Example consumer to fit homeassistants mqtt switch
+    https://www.home-assistant.io/components/switch.mqtt/
+'''
 import logging
 import os
 from logging.config import dictConfig
@@ -10,21 +13,23 @@ from app.broker import MQTTPublisher, MQTTSubscriber
 from app.device import DeviceDict, DeviceRegistry, MemoryState
 from app.rc433 import RC433Factory
 
+
 base_path = os.path.abspath(os.path.dirname(__file__))
 
 global_config = yaml.load(open(os.path.join(base_path, 'conf/logging.yaml')))
 dictConfig(global_config['logging'])
 logger = logging.getLogger("RC433MQ")
 
-
-MSG_SCHEMA = Schema({
-    'topic': str,
-    'command': And(str, lambda s: s in ['switch', 'state']),
-    'device': str,
-    'state': And(str, Use(str.lower), lambda s: s in ('on', 'off')),
-    Optional('floor'): str,
-    Optional('uuid'): str,
-    Optional('ts'): int
+STATE_SCHEMA = Schema(And(str, Use(str.lower), lambda s: s in ('on', 'off')))
+TOPIC_SCHEMA = Schema({
+    'topic':
+    And(str, lambda s: s == 'rc433'),
+    'floor':
+    And(str, lambda s: s in ['groundfloor', 'firstfloor', 'secondfloor']),
+    'device':
+    And(str, lambda s: s[:2] in ['gf', 'ff', 'sf']),
+    Optional('command'):
+    str
 })
 
 
@@ -42,23 +47,24 @@ def get_devices():
 if __name__ == '__main__':
 
     def handle_state(client, userdata, message):
-        """
-        Callback function if a message appears on subscribed topi
-        """
         try:
-            msg = json.loads(message.payload.decode("utf-8").replace("'", '"'))
-            MSG_SCHEMA.validate(msg)
+            TOPICS = ['topic', 'floor', 'device', 'command']
+            topic_dict = dict(zip(TOPICS, message.topic.split("/")))
+            TOPIC_SCHEMA.validate(topic_dict)
+
+            state = message.payload.decode("utf-8")
+            STATE_SCHEMA.validate(state)
+
             logger.info(
-                "Topic '{topic}' received state {state} for device '{device}'"
-                .format(**msg)
+                "Topic {topic_dict} received state {state}".format(**locals())
             )
-            device = device_db.lookup(msg['device'])
+
+            device = device_db.lookup(topic_dict['device'])
             svc = RC433Factory.service(device)()
-            svc.switch(device=device, state=msg['state'])
-            # return result
-            msg['command'] = 'state'
-            topic = "{topic}/state".format(**msg)
-            mqp.publish(topic=topic, payload=str(msg), retain=True)
+            if svc.switch(device=device, state=state):
+                # return result
+                topic = "{topic}/{floor}/{device}/state".format(**topic_dict)
+                mqp.publish(topic=topic, payload=state, retain=True)
         except Exception:
             import traceback
             logger.error(traceback.print_exc())
@@ -66,10 +72,8 @@ if __name__ == '__main__':
     device_db = get_devices()
     device_names = [dev.device.device_name for dev in device_db.list()]
     logger.info(
-        "Loaded {} devices {}".
-        format(str(len(device_names)), device_names)
+        "Loaded {} devices {}".format(str(len(device_names)), device_names)
     )
-
     config_file = os.path.join(base_path, 'conf/consumer.json')
     mqs = MQTTSubscriber.from_config(config_file)
     mqp = MQTTPublisher.from_config(config_file)

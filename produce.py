@@ -6,15 +6,13 @@ import logging
 import os
 import random
 import time
-import uuid
 
 from app.broker import MQTTPublisher
 from app.device import DeviceDict, DeviceRegistry, MemoryState
 
 level = logging.DEBUG
 logging.basicConfig(
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
-    level=level
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s', level=level
 )
 logger = logging.getLogger("RC433MQ")
 
@@ -37,10 +35,8 @@ if __name__ == '__main__':
 
     devices = get_devices()
     device_names = [dev.device.device_name for dev in devices.list()]
-    logger.info(
-        "Loaded {} devices which are: {}".
-        format(str(len(device_names)), device_names)
-    )
+    logger.info("Loaded {} devices which are: {}".format(
+        str(len(device_names)), device_names))
 
     config_file = os.path.join(base_path, 'conf/consumer.json')
     client = MQTTPublisher.from_config(config_file)
@@ -50,13 +46,22 @@ if __name__ == '__main__':
         id = random.randrange(len(device_names))
         device = device_names[id]
         state = "on" if id % 2 == 0 else "off"
-        message = dict(
-            topic='rc433',
-            device=device,
-            state=state.upper(),
-            command='switch',
-            uuid=str(uuid.uuid4()),
-            ts=int(time.time())
-        )
-        logger.info("Send message {}".format(message))
-        client.publish(topic=message['topic'], payload=str(message))
+        # message = str(dict(
+        #         device=device,
+        #         state=state,
+        #         uuid=str(uuid.uuid4()),
+        #         ts=int(time.time())
+        #     )
+        # )
+        # logger.info("Send message {} to topic 'rc433'".format(message))
+        if device[:2] == 'gf':
+            floor = 'groundfloor'
+        elif device[:2] == 'ff':
+            floor = 'firstfloor'
+        elif device[:2] == 'sf':
+            floor = 'secondfloor'
+
+        logger.info("rc433/{}/{}/switch: {}".format(floor, device,
+                                                    state.upper()))
+        client.publish("rc433/{}/{}/switch".format(floor, device),
+                       state.upper())
