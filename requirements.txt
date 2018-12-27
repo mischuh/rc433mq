@@ -2,3 +2,4 @@ attrs
 schema
 paho-mqtt
 RPi.GPIO
+pyyaml
