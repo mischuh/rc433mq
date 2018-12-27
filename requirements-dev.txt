@@ -8,5 +8,6 @@ py==1.7.0
 pycodestyle==2.4.0
 pyflakes==2.0.0
 pytest==3.10.0
+pylint
 six==1.11.0
 yapf==0.24.0

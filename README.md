@@ -2,6 +2,15 @@
 
 Paste some intelligent text...
 
+## Setup locally
+
+    python3 -m venv venv
+    source venv/bin/activate
+    pip install -Ur requirements-dev.txt
+    pip install -Ur requirements.txt 
+
+Python module RPi.GPIO will not work, if you're not on an RaspiPi...
+
 ## For local testing
 
 Start local MQTT broker
@@ -28,10 +37,7 @@ Each topic can have its own QoS.
         "username": "admin",
         "password": "admin",
         "topics": {
-            "rc433/device1": 0,
-            "rc433/device2": 0,
-            "rc433/device3": 0,
-            "rc433/device4": 0
+            "rc433": 0,            
         }
     }
 ```
