@@ -2,15 +2,15 @@ import os
 
 import pytest
 
-from app.consumer import InvalidConsumerConfigException, MQTTConsumer
+from app.broker import InvalidClientConfigException, MQTTSubscriber
 
 
 def test_mqtt_from_config():
     base_path = os.path.abspath(os.path.dirname(__file__))
     config = os.path.join(base_path, './conf/consumer_test.json')
-    mqtt = MQTTConsumer.from_config(config)
-    assert mqtt.consumer_conf['host'] == 'localhost'
-    assert mqtt.consumer_conf['port'] == 1883
+    mqtt = MQTTSubscriber.from_config(config)
+    assert mqtt.client_conf['host'] == 'localhost'
+    assert mqtt.client_conf['port'] == 1883
 
 
 def test_from_config_with_empty_yaml():
@@ -18,14 +18,14 @@ def test_from_config_with_empty_yaml():
     empty_config = os.path.join(base_path, './conf/empty.json')
     from json.decoder import JSONDecodeError
     with pytest.raises(JSONDecodeError):
-        MQTTConsumer.from_config(empty_config)
+        MQTTSubscriber.from_config(empty_config)
 
 
 def test_invalid_mqtt_from_config():
     base_path = os.path.abspath(os.path.dirname(__file__))
     config = os.path.join(base_path, './conf/invalid_consumer_test.json')
-    with pytest.raises(InvalidConsumerConfigException) as why:
-        MQTTConsumer.from_config(config)
+    with pytest.raises(InvalidClientConfigException) as why:
+        MQTTSubscriber.from_config(config)
     assert "Given consumer config is not valid:" in str(why)
 
 
